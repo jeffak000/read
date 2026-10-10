@@ -1,0 +1,8 @@
+[Unit]
+Description=Read local daily cleanup schedule
+[Timer]
+OnCalendar=*-*-* 04:00:00
+Persistent=true
+Unit=read-local-cleanup.service
+[Install]
+WantedBy=timers.target

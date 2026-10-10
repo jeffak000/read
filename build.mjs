@@ -1,0 +1,10 @@
+import {build} from 'esbuild';import {mkdir,copyFile,cp} from 'node:fs/promises';
+await mkdir('public',{recursive:true});
+await build({entryPoints:['src/compiler.ts'],outfile:'public/compiler.js',bundle:true,format:'esm',target:'safari15',minify:true});
+await build({entryPoints:{app:'src/main.ts'},outdir:'public',chunkNames:'chunks/[name]-[hash]',splitting:true,bundle:true,format:'esm',target:'safari15',minify:true,external:['/pdfjs/*']});
+for(const n of ['index.html','style.css','start.js','about.html'])await copyFile('src/'+n,'public/'+n);
+await copyFile('api.php','public/api.php');await copyFile('LICENSE','public/COPYING');
+await cp('node_modules/ngx-extended-pdf-viewer/assets','public/assets',{recursive:true});await mkdir('public/pdfjs',{recursive:true});
+for(const n of ['pdf.mjs','pdf.worker.mjs'])await copyFile('node_modules/pdfjs-dist/legacy/build/'+n,'public/pdfjs/'+n);await cp('node_modules/pdfjs-dist/wasm','public/pdfjs/wasm',{recursive:true});
+await mkdir('public/licenses',{recursive:true});for(const n of ['pdfjs-dist','ngx-extended-pdf-viewer','@angular/core','@angular/common','@angular/compiler','@angular/forms','@angular/platform-browser'])await copyFile('node_modules/'+n+'/LICENSE','public/licenses/'+n.replaceAll('/','-')+'.txt');
+console.log('Built public/ (no credentials or user data)');

@@ -1,0 +1,9 @@
+[Unit]
+Description=Read local family bookshelf PHP service
+After=network.target
+[Service]
+Type=simple
+ExecStart=/var/packages/PHP8.2/target/usr/local/bin/php82-fpm -F -y /var/lib/read-local/fpm.conf -c /var/lib/read-local/php.ini
+Restart=on-failure
+[Install]
+WantedBy=multi-user.target

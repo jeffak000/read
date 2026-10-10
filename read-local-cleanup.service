@@ -1,0 +1,6 @@
+[Unit]
+Description=Read local expired upload parts cleanup
+[Service]
+Type=oneshot
+ExecStart=/var/packages/PHP8.2/target/usr/local/bin/php82 /var/lib/read-local/maintenance.php cleanup
+UMask=0077

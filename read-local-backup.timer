@@ -1,0 +1,8 @@
+[Unit]
+Description=Read local monthly backup schedule
+[Timer]
+OnCalendar=*-*-01 03:00:00
+Persistent=true
+Unit=read-local-backup.service
+[Install]
+WantedBy=timers.target

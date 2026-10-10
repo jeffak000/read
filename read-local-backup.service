@@ -1,0 +1,6 @@
+[Unit]
+Description=Read local monthly SQLite and covers backup
+[Service]
+Type=oneshot
+ExecStart=/var/packages/PHP8.2/target/usr/local/bin/php82 /var/lib/read-local/maintenance.php backup
+UMask=0077
