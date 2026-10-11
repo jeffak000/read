@@ -1,51 +1,41 @@
-# Read · 家庭 PDF 书架
+# Read · 自托管 PDF 书架
 
-简洁的中文 PDF 书架，适合家庭局域网与 iPad。Angular + PDF.js + PHP 8.2 + SQLite，适配群晖 nginx/Web 目录，不需要 Docker、云服务或 HTTPS。
+当前版本 **v1.02**。中文家庭局域网书架，Angular + PDF.js + PHP 8.2 + SQLite。无需 Docker、云服务、外部数据库或 HTTPS。不限定群晖，普通电脑、Linux 服务器和支持 PHP 的 NAS 均可配置使用；不是完整 Kavita。静态托管不能运行 PHP 后台。
 
-## 功能
+## 功能与升级
 
-- 免登录阅读；管理员批量上传、修改书名分类、确认删除。
-- PDF书名/首页封面识别、搜索分类、继续阅读、缩放、明暗主题和单双页。
-- 每块4 MiB上传，不设30 MB应用上限；仍受磁盘和设备资源限制。
-- 访客进度保存在浏览器，登录账号进度保存在SQLite；登录有效期7天。
-- 管理员健康检查；每月SQLite在线备份与封面备份，保留最近5份；每日清理超过24小时的上传残留。
+免登录阅读、管理员管理、小读者账号、批量 4 MiB 分块上传（无 30 MB 应用上限）、书名封面页数识别、搜索分类和阅读进度。本版新增本地规则自动分类、上传前预览修改、现有书目批量分类整理、iPad 紧凑工具栏与专注模式。每月 SQLite 在线备份及封面备份保留最新 5 份，清理残留分块，管理员健康检查。
 
-扫描导入、文件哈希去重、标签、拼音搜索和家长统计尚未实现。不是完整版Kavita。
+详细见 [CHANGELOG.md](CHANGELOG.md)。自动分类需要人工确认；实际 iPad Safari 效果需设备验证。扫描导入、哈希去重、标签、拼音搜索、家长看板尚未实现。访客进度存浏览器，账号进度存 SQLite，登录有效期 7 天。
 
-## 构建
+## 构建与配置
 
-需要Node.js及npm：
-```sh
-npm ci
-npm run build
-```
-`public/` 为部署文件。第三方依赖由package-lock.json锁定。开源发行需同时提供此仓库源码和第三方许可证，不包含图书和运行数据。
+Node.js 20+：`npm ci` 后 `npm run build`。发行 ZIP 已含构建文件，运行端不需要 Node.js。
 
-## 群晖部署
+运行需要 PHP 8.2+、PDO_SQLite、SQLite3、mbstring。仅以 public/ 为网页根目录，将 /api/* 路由至 public/api.php，保留 Authorization 头；mjs MIME 为 application/javascript，wasm 为 application/wasm。实际验证环境为 Linux/NAS，其他系统需按要求配置验证，并非所有主机开箱即用。
 
-先备份已有网站和数据，不要覆盖其他项目。安装官方PHP 8.2；复制public到 `/volume1/web/read-local`。数据目录 `/var/lib/read-local`（http用户可写，禁止通过网页访问），PDF目录 `/volume1/download/book`。运行配置php.ini、fpm.conf、read-local.service为示例，需按你的实际PHP路径和IP调整。nginx示例使用9080端口，只绑定家庭NAS地址，PDF/API走同源。
+创建项目根目录下 books、data、data/covers、data/parts、backups，并授予网站账户写权限。这些目录和 init.php、maintenance.php 不得公开到网页根目录。自定义路径使用环境变量：READ_BOOK_ROOT、READ_DATA_DIR、READ_BACKUP_DIR，默认分别是项目根目录下 books、data、backups。
 
-创建数据目录、covers、parts目录并授予http用户权限。使用init.php初始化：通过stdin提供JSON对象，字段username、password（自行选择强密码），不得将密码写入公开文件。该脚本只在不存在管理员时创建管理员，不重置现有账号。执行身份应为http：
-```sh
-/var/packages/PHP8.2/target/usr/local/bin/php82 init.php
-```
-输入JSON后结束stdin。安装PHP-FPM配置并启用read-local.service；安装nginx站点配置，先 `nginx -t` 再reload。不要把init.php或数据目录公开到网页入口。维护脚本安装到 `/var/lib/read-local/maintenance.php`。
+PHP-FPM 可能清空环境变量，请在池配置设置 `env[READ_DATA_DIR] = /实际/data` 等三项。维护任务使用相同配置。Windows 使用绝对路径和文件 ACL。仓库原有 nginx/FPM/service 文件是 NAS 示例，其他系统须调整 PHP 路径、用户、目录、监听地址和 socket，不能原样照搬。
 
-健康检查在管理员侧边栏；`GET /api/health`需要管理员。匿名书架和PDF是有意公开给家庭局域网访问者的。
+首次使用网站账户运行 `php init.php`，标准输入提供 JSON（username、password）；自行选择密码，不写入仓库。只在没有管理员时创建，不重置已有管理员。
 
-## 备份与维护
+开发测试：`php -S 127.0.0.1:9080 -t public router.php`。内置服务器不适合生产并发大文件；部署用 nginx/Apache + PHP，仅监听家庭网络，防火墙禁止公网访问。
 
-创建私有备份目录 `/volume1/download/read-backups`，限制为维护账户访问。两个timer示例：每月1日03:00备份、每日04:00清理，按NAS本地时区；可改用DSM任务计划（root）执行下列命令，勿重复配置两套调度：
-```sh
-/var/packages/PHP8.2/target/usr/local/bin/php82 /var/lib/read-local/maintenance.php backup
-/var/packages/PHP8.2/target/usr/local/bin/php82 /var/lib/read-local/maintenance.php cleanup
-```
-cleanup末尾加 `--dry-run` 可预检。备份只有数据库与封面，**不包含PDF**。备份含密码哈希和会话，不能公开。
+## 升级、验证与回滚
 
-恢复前停用维护timer和网站服务，并保留当前数据的救援副本。检查备份SQLite integrity_check=ok，再将library.sqlite及covers恢复，旧数据库-wal/-shm文件移走，恢复http用户权限。PDF必须仍在原路径；检查书目数量、健康检查、封面、PDF及登录后再启动维护timer。DSM升级后复查服务和timer。
+先保存旧网站及数据救援副本，停止写入。替换网页构建文件及私有维护脚本，不覆盖 PDF 或数据库。原 NAS 安装必须设置 READ_BOOK_ROOT=/volume1/download/book、READ_DATA_DIR=/var/lib/read-local、READ_BACKUP_DIR=/volume1/download/read-backups，避免使用新默认目录。
+
+无数据库结构变更，无迁移。重启 PHP 后核对书目数量、封面、PDF、登录、上传确认、分类整理、健康检查及 iPad 横竖屏阅读。回滚时停止服务，恢复旧代码及运行配置后启动；保留当前数据库即可。
+
+## 维护与恢复
+
+系统任务计划每月执行 `php /项目路径/maintenance.php backup`，每日执行 `php /项目路径/maintenance.php cleanup`；任务携带相同环境变量和写权限。cron 时间可用 `0 3 1 * *` 和 `0 4 * * *`，不要重复调度。cleanup 支持 --dry-run。备份只有数据库及封面，不含 PDF；新备份校验成功后保留最新 5 份，限制备份访问权限。
+
+恢复时停用网站写入及维护任务，保存当前数据；检查备份 SQLite 的 PRAGMA integrity_check 返回 ok，恢复 library.sqlite 和 covers，移走旧 -wal/-shm 文件，恢复文件权限。PDF 原文件必须仍存在。启动后检查书目数量、健康检查、封面、PDF和登录，再启用维护任务。重启机器后的自动访问依赖 Web/PHP 服务自启动设置。
 
 ## 安全与许可证
 
-仅用于可信家庭网络。HTTP不加密，管理员密码可能被同网络攻击者截获；不要开放公网。没有整本离线缓存或OCR。仓库不含账号、图书、数据库、私钥、API token或备份。
+仅可信家庭网络使用，HTTP 不加密；免登录意味着同网络用户可看书。管理权限由 PHP 后台检查。不开放公网。发行包无私人图书、数据库、密码、token、证书或备份。
 
-GPL-3.0-only，见LICENSE与UPSTREAM.md；仅复用Kavita部分阅读器前端逻辑，不是官方项目。保留第三方许可证。
+GPL-3.0-only，见 LICENSE、UPSTREAM.md。保留 Kavita 改编代码及第三方许可证，不是 Kavita 官方项目。完整源码随发行包附带。

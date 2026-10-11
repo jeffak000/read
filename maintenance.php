@@ -2,7 +2,7 @@
 declare(strict_types=1);
 // CLI-only; outside nginx root. Never backs up PDF originals.
 if(PHP_SAPI!=='cli')exit(1);
-const DATA='/var/lib/read-local';const BACKUPS='/volume1/download/read-backups';
+define('DATA', getenv('READ_DATA_DIR') ?: __DIR__.'/data');define('BACKUPS', getenv('READ_BACKUP_DIR') ?: __DIR__.'/backups');
 date_default_timezone_set('Asia/Shanghai');umask(0077);
 function erase(string $p,string $root):void{$r=realpath($root);$target=realpath($p);if(!$r||!$target||!str_starts_with($target,$r.'/')||is_link($p))throw new RuntimeException('Unsafe cleanup path');foreach(new DirectoryIterator($p) as $item){if($item->isDot())continue;$f=$item->getPathname();if($item->isLink())throw new RuntimeException('Symlink refused');if($item->isDir())erase($f,$root);else unlink($f);}rmdir($p);}
 function copyTree(string $from,string $to):void{if(!is_dir($to))mkdir($to,0700,true);foreach(new DirectoryIterator($from) as $item){if($item->isDot())continue;if($item->isLink())throw new RuntimeException('Symlink refused');$dest=$to.'/'.$item->getFilename();if($item->isDir())copyTree($item->getPathname(),$dest);elseif(!copy($item->getPathname(),$dest))throw new RuntimeException('Backup copy failed');}}

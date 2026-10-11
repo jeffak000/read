@@ -25,6 +25,6 @@ export async function preparePdf(file:File,report:(message:string)=>void=()=>{})
   const render=page.render({canvasContext:canvas.getContext('2d'),viewport,canvas});
   try{await bounded(render.promise,'生成封面',20000);}catch{render.cancel();const ctx=canvas.getContext('2d')!;ctx.fillStyle='#eee9dc';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.fillStyle='#365547';ctx.font='20px sans-serif';ctx.fillText(naming.title.slice(0,18),20,60);}
   const cover=await bounded(new Promise<Blob>((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(Error('封面生成失败')),'image/jpeg',.8)),'保存封面');
-  return {...naming,pages:doc.numPages,cover};
+  return {...naming,pages:doc.numPages,cover,categoryText:[metadata.info?.Subject,metadata.info?.Keywords,...items.map((x:any)=>x.str||'')].filter(Boolean).join(' ').slice(0,12000)};
  }catch(e:any){if(e.name==='PasswordException')throw Error('PDF 有密码，请先解密再上传');throw e;}finally{void task.destroy().catch(()=>{});}
 }
